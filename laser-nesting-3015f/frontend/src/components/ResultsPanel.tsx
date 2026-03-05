@@ -1,4 +1,4 @@
-import { PlanParams, PlanResult, dxfUrl } from '../services/api';
+import { PlanParams, PlanResult, exportDxf } from '../services/api';
 
 type Props = {
   result: PlanResult | null;
@@ -23,7 +23,19 @@ export default function ResultsPanel({ result, params }: Props) {
     URL.revokeObjectURL(url);
   };
 
-  if (!result) return <section className="card"><h2>Resultados</h2><p>Preencha e gere o plano.</p></section>;
+  const handleExportDxf = async () => {
+    if (!result) return;
+    await exportDxf(params, result);
+  };
+
+  if (!result) {
+    return (
+      <section className="card">
+        <h2>Resultados</h2>
+        <p>Preencha e gere o plano.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="card" aria-live="polite">
@@ -37,8 +49,8 @@ export default function ResultsPanel({ result, params }: Props) {
         <li>Tempo estimado: <strong>{formatTime(result.tempo_estimado)}</strong></li>
       </ul>
       <div className="actions">
-        <a className="btn" href={dxfUrl(params)}>Exportar DXF</a>
-        <button className="btn" onClick={exportJson}>Exportar JSON</button>
+        <button type="button" className="btn" onClick={handleExportDxf}>Exportar DXF</button>
+        <button type="button" className="btn" onClick={exportJson}>Exportar JSON</button>
         {result.svg_inline && (
           <a
             className="btn"

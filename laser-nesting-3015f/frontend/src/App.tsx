@@ -40,10 +40,10 @@ export default function App() {
     <main className="app">
       <header className="topbar">
         <h1>Laser Nesting 3015F</h1>
-        <p>Planejamento de corte circular em mm</p>
+        <p>Planejamento de corte circular em mm (API ou modo local)</p>
       </header>
-      {error && <div className="error">{error}</div>}
-      <section className="layout">
+      {error && <div className="error" role="alert">{error}</div>}
+      <section className="layout" aria-label="Layout principal">
         <InputForm values={params} onChange={setParams} onSubmit={run} loading={loading} />
         <div className="right-col">
           <ResultsPanel result={result} params={params} />
