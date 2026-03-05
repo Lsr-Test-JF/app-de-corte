@@ -1,0 +1,14 @@
+{
+  "largura_chapa": 3000,
+  "altura_chapa": 1500,
+  "espessura": 3,
+  "margem_borda": 10,
+  "diametro_peca": 127,
+  "kerf_laser": 1.5,
+  "spacing": 2,
+  "quantidade_desejada": null,
+  "velocidade_corte": 35,
+  "lead_in_mm": 0,
+  "lead_out_mm": 0,
+  "metodo_preferido": "auto"
+}
