@@ -32,7 +32,7 @@ export type PlanResult = {
   svg_inline?: string;
 };
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+const BASE_URL = (import.meta.env.VITE_API_URL ?? '').trim();
 
 export async function createPlan(params: PlanParams): Promise<PlanResult> {
   if (!BASE_URL) return createPlanLocal(params);
@@ -45,7 +45,7 @@ export async function createPlan(params: PlanParams): Promise<PlanResult> {
     });
 
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.detail ?? 'Falha ao gerar plano');
     }
 
@@ -58,7 +58,12 @@ export async function createPlan(params: PlanParams): Promise<PlanResult> {
 export async function exportDxf(params: PlanParams, result: PlanResult): Promise<void> {
   if (BASE_URL) {
     try {
-      const query = new URLSearchParams(params as unknown as Record<string, string>);
+      const query = new URLSearchParams(
+        Object.entries(params).reduce<Record<string, string>>((acc, [key, value]) => {
+          if (value !== undefined && value !== null) acc[key] = String(value);
+          return acc;
+        }, {})
+      );
       const response = await fetch(`${BASE_URL}/api/v1/plan/dxf?${query.toString()}`);
       if (response.ok) {
         const blob = await response.blob();

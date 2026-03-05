@@ -35,7 +35,7 @@ SIMPLE_UI=true PYTHONPATH=backend:. streamlit run streamlit_app/app_streamlit.py
 2. Em **Settings → Pages**, selecione **GitHub Actions** como source.
 3. (Opcional) Em **Settings → Secrets and variables → Actions → Variables**, crie:
    - `VITE_API_URL=https://seu-backend.onrender.com`
-4. Faça push na branch `work`.
+4. Faça push na branch `main` ou `work`.
 5. O workflow `.github/workflows/pages.yml` publica automaticamente.
 
 > Se `VITE_API_URL` não for definido, o frontend roda em modo local no navegador (sem backend) para cálculo/visualização/export JSON/DXF local.

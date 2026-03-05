@@ -49,8 +49,8 @@ export default function ResultsPanel({ result, params }: Props) {
         <li>Tempo estimado: <strong>{formatTime(result.tempo_estimado)}</strong></li>
       </ul>
       <div className="actions">
-        <button className="btn" onClick={handleExportDxf}>Exportar DXF</button>
-        <button className="btn" onClick={exportJson}>Exportar JSON</button>
+        <button type="button" className="btn" onClick={handleExportDxf}>Exportar DXF</button>
+        <button type="button" className="btn" onClick={exportJson}>Exportar JSON</button>
         {result.svg_inline && (
           <a
             className="btn"
