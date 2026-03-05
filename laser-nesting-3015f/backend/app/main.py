@@ -9,6 +9,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 
 from .export.dxf_exporter import export_plan_to_dxf
+from .geometry import (
+    effective_diameter_mm,
+    piece_area_mm2,
+    piece_perimeter_mm,
+    shape_envelope_diameter_mm,
+    sheet_area_mm2,
+)
 from .geometry import circle_area_mm2, circle_circumference_mm, effective_diameter_mm, sheet_area_mm2
 from .nesting import compare_methods
 from .nesting.grid import generate_grid
@@ -19,6 +26,25 @@ from .utils import estimate_rows_and_cols, limit_quantity, validate_capacity_or_
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("laser-nesting")
 
+app = FastAPI(title="Laser Nesting 3015F API", version="1.1.0")
+
+
+def _shape_svg(params: PlanRequest, piece: Piece) -> str:
+    if params.formato == "circulo":
+        real_r = float(params.diametro_peca or 0) / 2.0
+        return f"<circle cx='{piece.x}' cy='{piece.y}' r='{real_r}' class='piece'/>"
+    if params.formato == "retangulo":
+        w = float(params.largura_peca or 0)
+        h = float(params.altura_peca or 0)
+        return f"<rect x='{piece.x - w/2}' y='{piece.y - h/2}' width='{w}' height='{h}' class='piece'/>"
+
+    points = params.poligono_pontos or []
+    xs = [p.x for p in points]
+    ys = [p.y for p in points]
+    cx = (max(xs) + min(xs)) / 2.0
+    cy = (max(ys) + min(ys)) / 2.0
+    pts = " ".join(f"{p.x - cx + piece.x},{p.y - cy + piece.y}" for p in points)
+    return f"<polygon points='{pts}' class='piece'/>"
 app = FastAPI(title="Laser Nesting 3015F API", version="1.0.0")
 
 
@@ -37,24 +63,43 @@ def _build_svg(params: PlanRequest, pieces: list[Piece], title: str) -> str:
         f'<line x1="0" y1="{y}" x2="{params.largura_chapa}" y2="{y}" class="grid-major" />'
         for y in range(0, int(params.altura_chapa) + 1, 500)
     )
-    circles = "".join(
-        f'<g><circle cx="{p.x}" cy="{p.y}" r="{p.raio}" class="piece" />'
-        f'<text x="{p.x}" y="{p.y}" class="piece-id">{p.id}</text></g>'
-        for p in pieces
+    shapes = "".join(
+        f"<g>{_shape_svg(params, p)}<text x='{p.x}' y='{p.y}' class='piece-id'>{p.id}</text></g>" for p in pieces
     )
+
     return f"""<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {params.largura_chapa} {params.altura_chapa}' width='{params.largura_chapa}' height='{params.altura_chapa}'>
 <style>
 .grid-minor{{stroke:#d7d9dc;stroke-width:0.8}} .grid-major{{stroke:#a5abb3;stroke-width:1.4}}
 .piece{{fill:#f2f4f6;stroke:#333;stroke-width:1.2}} .piece-id{{font:10px sans-serif;text-anchor:middle;dominant-baseline:middle;fill:#111}}
 </style>
 <rect x='0' y='0' width='{params.largura_chapa}' height='{params.altura_chapa}' fill='#fff' stroke='#222' stroke-width='3'/>
-{grid_minor}{grid_major}{circles}
+{grid_minor}{grid_major}{shapes}
 <text x='10' y='20' font-size='18' fill='#111'>{title}</text>
 </svg>"""
 
 
+def _parametros_entrada_nomeados(params: PlanRequest) -> dict[str, object]:
+    return {
+        "largura_chapa_(mm)": params.largura_chapa,
+        "altura_chapa_(mm)": params.altura_chapa,
+        "espessura_(mm)": params.espessura,
+        "margem_borda_(mm)": params.margem_borda,
+        "formato": params.formato,
+        "diametro_peca_(mm)": params.diametro_peca if params.formato == "circulo" else None,
+        "largura_peca_(mm)": params.largura_peca if params.formato == "retangulo" else None,
+        "altura_peca_(mm)": params.altura_peca if params.formato == "retangulo" else None,
+        "poligono_pontos": [p.model_dump() for p in (params.poligono_pontos or [])] if params.formato == "poligono" else None,
+        "kerf_laser_(mm)": params.kerf_laser,
+        "Espaçamento_entre_peças_(mm)": params.spacing,
+        "lead_in_mm": params.lead_in_mm,
+        "lead_out_mm": params.lead_out_mm,
+        "metodo_preferido": params.metodo_preferido,
+    }
+
+
 def _build_plan(params: PlanRequest) -> PlanResponse:
-    d_eff = effective_diameter_mm(params.diametro_peca, params.kerf_laser, params.spacing)
+    shape_d = shape_envelope_diameter_mm(params)
+    d_eff = effective_diameter_mm(shape_d, params.kerf_laser, params.spacing)
 
     if params.metodo_preferido == "grid":
         pieces, step_y = generate_grid(params, d_eff)
@@ -71,16 +116,20 @@ def _build_plan(params: PlanRequest) -> PlanResponse:
 
     total = len(pieces)
     area_sheet = sheet_area_mm2(params.largura_chapa, params.altura_chapa)
-    area_pieces = total * circle_area_mm2(params.diametro_peca)
+    unit_area = piece_area_mm2(params)
+    area_pieces = total * unit_area
     utilization = (area_pieces / area_sheet) * 100.0 if area_sheet > 0 else 0.0
 
-    cut_total = total * circle_circumference_mm(params.diametro_peca)
+    cut_total = total * piece_perimeter_mm(params)
     tempo = cut_total / params.velocidade_corte
     rows, cols = estimate_rows_and_cols(pieces, step_y)
-    title = f"Plano de corte - {total} peças Ø{params.diametro_peca:.0f} mm em chapa {params.largura_chapa:.0f}x{params.altura_chapa:.0f} mm"
+    title = (
+        f"Plano de corte - {total} peças {params.formato} em chapa "
+        f"{params.largura_chapa:.0f}x{params.altura_chapa:.0f} mm"
+    )
 
     return PlanResponse(
-        parametros_entrada=params,
+        parametros_entrada=_parametros_entrada_nomeados(params),
         metodo_escolhido=method,
         diametro_efetivo=d_eff,
         pecas=pieces,
@@ -105,29 +154,8 @@ def create_plan(params: PlanRequest) -> PlanResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/api/v1/plan/dxf")
-def export_dxf(
-    largura_chapa: float = 3000,
-    altura_chapa: float = 1500,
-    espessura: float = 3,
-    margem_borda: float = 10,
-    diametro_peca: float = 127,
-    kerf_laser: float = 1.5,
-    spacing: float = 2,
-    velocidade_corte: float = 35,
-    metodo_preferido: str = "auto",
-) -> FileResponse:
-    params = PlanRequest(
-        largura_chapa=largura_chapa,
-        altura_chapa=altura_chapa,
-        espessura=espessura,
-        margem_borda=margem_borda,
-        diametro_peca=diametro_peca,
-        kerf_laser=kerf_laser,
-        spacing=spacing,
-        velocidade_corte=velocidade_corte,
-        metodo_preferido=metodo_preferido,
-    )
+@app.post("/api/v1/plan/dxf")
+def export_dxf_post(params: PlanRequest) -> FileResponse:
     plan = _build_plan(params)
     out = Path("/tmp/plano_nesting.dxf")
     export_plan_to_dxf(params, plan.pecas, out)

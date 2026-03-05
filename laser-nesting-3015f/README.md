@@ -40,6 +40,32 @@ SIMPLE_UI=true PYTHONPATH=backend:. streamlit run streamlit_app/app_streamlit.py
 
 > Se `VITE_API_URL` não for definido, o frontend roda em modo local no navegador (sem backend) para cálculo/visualização/export JSON/DXF local.
 
+
+## Formatos suportados
+- `circulo`: usar `diametro_peca_(mm)`
+- `retangulo`: usar `largura_peca_(mm)` + `altura_peca_(mm)`
+- `poligono`: usar `poligono_pontos` com pontos `(x,y)` por linha no frontend
+
+Exemplo de `parametros_entrada` no retorno:
+```json
+{
+  "largura_chapa_(mm)": 3000.0,
+  "altura_chapa_(mm)": 1500.0,
+  "espessura_(mm)": 3.0,
+  "margem_borda_(mm)": 10.0,
+  "formato": "circulo",
+  "diametro_peca_(mm)": 127.0,
+  "kerf_laser_(mm)": 1.5,
+  "Espaçamento_entre_peças_(mm)": 2.0,
+  "lead_in_mm": 0.0,
+  "lead_out_mm": 0.0,
+  "metodo_preferido": "auto"
+}
+```
+
+## Endpoints backend
+- `POST /api/v1/plan`
+- `POST /api/v1/plan/dxf`
 ## Endpoints backend
 - `POST /api/v1/plan`
 - `GET /api/v1/plan/dxf`

@@ -1,11 +1,17 @@
 import { createDxfLocal, createPlanLocal } from './localEngine';
 
+export type Point = { x: number; y: number };
+
 export type PlanParams = {
   largura_chapa: number;
   altura_chapa: number;
   espessura: number;
   margem_borda: number;
-  diametro_peca: number;
+  formato: 'circulo' | 'retangulo' | 'poligono';
+  diametro_peca?: number;
+  largura_peca?: number;
+  altura_peca?: number;
+  poligono_pontos?: Point[];
   kerf_laser: number;
   spacing: number;
   quantidade_desejada?: number;
@@ -18,6 +24,7 @@ export type PlanParams = {
 export type Piece = { id: number; x: number; y: number; raio: number };
 
 export type PlanResult = {
+  parametros_entrada: Record<string, unknown>;
   metodo_escolhido: string;
   total_pecas: number;
   linhas: number;
@@ -58,13 +65,11 @@ export async function createPlan(params: PlanParams): Promise<PlanResult> {
 export async function exportDxf(params: PlanParams, result: PlanResult): Promise<void> {
   if (BASE_URL) {
     try {
-      const query = new URLSearchParams(
-        Object.entries(params).reduce<Record<string, string>>((acc, [key, value]) => {
-          if (value !== undefined && value !== null) acc[key] = String(value);
-          return acc;
-        }, {})
-      );
-      const response = await fetch(`${BASE_URL}/api/v1/plan/dxf?${query.toString()}`);
+      const response = await fetch(`${BASE_URL}/api/v1/plan/dxf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
       if (response.ok) {
         const blob = await response.blob();
         downloadBlob(blob, 'plano_nesting.dxf');

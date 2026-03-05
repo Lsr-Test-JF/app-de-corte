@@ -1,6 +1,7 @@
 import math
 
-from app.geometry import circle_area_mm2, circle_circumference_mm, effective_diameter_mm
+from app.geometry import effective_diameter_mm, piece_area_mm2, piece_perimeter_mm, shape_envelope_diameter_mm
+from app.schemas import PlanRequest
 
 
 def test_effective_diameter() -> None:
@@ -8,5 +9,11 @@ def test_effective_diameter() -> None:
 
 
 def test_circle_values() -> None:
-    assert math.isclose(circle_circumference_mm(100), math.pi * 100)
-    assert math.isclose(circle_area_mm2(100), math.pi * 50 * 50)
+    params = PlanRequest(formato='circulo', diametro_peca=100)
+    assert math.isclose(piece_perimeter_mm(params), math.pi * 100)
+    assert math.isclose(piece_area_mm2(params), math.pi * 50 * 50)
+
+
+def test_rectangle_envelope() -> None:
+    params = PlanRequest(formato='retangulo', largura_peca=120, altura_peca=80, diametro_peca=None)
+    assert math.isclose(shape_envelope_diameter_mm(params), math.hypot(120, 80))

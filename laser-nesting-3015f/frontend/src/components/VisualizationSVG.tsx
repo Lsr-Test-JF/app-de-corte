@@ -17,6 +17,12 @@ export default function VisualizationSVG({ result, width, height }: Props) {
 
   if (!result) return <section className="card"><h2>Visualização</h2><p>Sem plano para mostrar.</p></section>;
 
+  const formato = String(result.parametros_entrada?.formato || 'circulo');
+  const diam = Number(result.parametros_entrada?.['diametro_peca_(mm)'] || 0);
+  const w = Number(result.parametros_entrada?.['largura_peca_(mm)'] || 0);
+  const h = Number(result.parametros_entrada?.['altura_peca_(mm)'] || 0);
+  const pts = (result.parametros_entrada?.poligono_pontos as Array<{ x: number; y: number }> | null) || [];
+
   return (
     <section className="card">
       <div className="toolbar">
@@ -31,12 +37,35 @@ export default function VisualizationSVG({ result, width, height }: Props) {
         <svg width={width * zoom} height={height * zoom} viewBox={`${offset.x} ${offset.y} ${width} ${height}`}>
           <g className="grid">{grid}</g>
           <rect x={0} y={0} width={width} height={height} fill="none" stroke="#1f2937" strokeWidth={5} />
-          {result.pecas.map((p) => (
-            <g key={p.id}>
-              <circle cx={p.x} cy={p.y} r={p.raio} className="piece" />
-              <text x={p.x} y={p.y} className="piece-text">{p.id}</text>
-            </g>
-          ))}
+          {result.pecas.map((p) => {
+            if (formato === 'retangulo') {
+              return (
+                <g key={p.id}>
+                  <rect x={p.x - w / 2} y={p.y - h / 2} width={w} height={h} className="piece" />
+                  <text x={p.x} y={p.y} className="piece-text">{p.id}</text>
+                </g>
+              );
+            }
+            if (formato === 'poligono' && pts.length > 2) {
+              const xs = pts.map((pt) => pt.x);
+              const ys = pts.map((pt) => pt.y);
+              const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+              const cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+              const poly = pts.map((pt) => `${pt.x - cx + p.x},${pt.y - cy + p.y}`).join(' ');
+              return (
+                <g key={p.id}>
+                  <polygon points={poly} className="piece" />
+                  <text x={p.x} y={p.y} className="piece-text">{p.id}</text>
+                </g>
+              );
+            }
+            return (
+              <g key={p.id}>
+                <circle cx={p.x} cy={p.y} r={diam / 2} className="piece" />
+                <text x={p.x} y={p.y} className="piece-text">{p.id}</text>
+              </g>
+            );
+          })}
         </svg>
       </div>
       <p className="legend">Peças: {result.total_pecas} | Aproveitamento: {result.aproveitamento.toFixed(2)}%</p>
