@@ -16,7 +16,6 @@ from .geometry import (
     shape_envelope_diameter_mm,
     sheet_area_mm2,
 )
-from .geometry import circle_area_mm2, circle_circumference_mm, effective_diameter_mm, sheet_area_mm2
 from .nesting import compare_methods
 from .nesting.grid import generate_grid
 from .nesting.hexagonal import generate_hexagonal
@@ -45,7 +44,6 @@ def _shape_svg(params: PlanRequest, piece: Piece) -> str:
     cy = (max(ys) + min(ys)) / 2.0
     pts = " ".join(f"{p.x - cx + piece.x},{p.y - cy + piece.y}" for p in points)
     return f"<polygon points='{pts}' class='piece'/>"
-app = FastAPI(title="Laser Nesting 3015F API", version="1.0.0")
 
 
 def _build_svg(params: PlanRequest, pieces: list[Piece], title: str) -> str:

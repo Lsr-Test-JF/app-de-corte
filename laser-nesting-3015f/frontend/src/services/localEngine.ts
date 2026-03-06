@@ -158,6 +158,18 @@ export function createDxfLocal(params: PlanParams, pieces: Piece[]): string {
       const x0 = piece.x - w / 2;
       const y0 = piece.y - h / 2;
       lines.push('0', 'LWPOLYLINE', '8', '0', '90', '4', '70', '1', '10', `${x0}`, '20', `${y0}`, '10', `${x0 + w}`, '20', `${y0}`, '10', `${x0 + w}`, '20', `${y0 + h}`, '10', `${x0}`, '20', `${y0 + h}`);
+    } else {
+      const pts = params.poligono_pontos || [];
+      if (pts.length >= 3) {
+        const xs = pts.map((pt) => pt.x);
+        const ys = pts.map((pt) => pt.y);
+        const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+        const cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+        lines.push('0', 'LWPOLYLINE', '8', '0', '90', `${pts.length}`, '70', '1');
+        for (const pt of pts) {
+          lines.push('10', `${pt.x - cx + piece.x}`, '20', `${pt.y - cy + piece.y}`);
+        }
+      }
     }
   }
   lines.push('0', 'ENDSEC', '0', 'EOF');

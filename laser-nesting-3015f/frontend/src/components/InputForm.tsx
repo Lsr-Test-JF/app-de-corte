@@ -56,9 +56,9 @@ export default function InputForm({ values, onChange, onSubmit, loading }: Props
           value={values.formato}
           onChange={(e) => onChange({ ...values, formato: e.target.value as PlanParams['formato'] })}
         >
-          <option value="circulo">Circulo (Diâmetro)</option>
-          <option value="retangulo">Retangulo (Largura/Altura)</option>
-          <option value="poligono">Poligono (Pontos)</option>
+          <option value="circulo">Circulo</option>
+          <option value="retangulo">Retangulo</option>
+          <option value="poligono">Poligono Pontos (x,y por linha)</option>
         </select>
       </label>
 

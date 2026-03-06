@@ -66,9 +66,6 @@ Exemplo de `parametros_entrada` no retorno:
 ## Endpoints backend
 - `POST /api/v1/plan`
 - `POST /api/v1/plan/dxf`
-## Endpoints backend
-- `POST /api/v1/plan`
-- `GET /api/v1/plan/dxf`
 - `POST /api/v1/visual`
 
 ## Testes
